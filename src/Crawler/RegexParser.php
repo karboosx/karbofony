@@ -2,7 +2,7 @@
 
 namespace Lib\Crawler;
 
-class Parser
+class RegexParser
 {
     private string $data;
 

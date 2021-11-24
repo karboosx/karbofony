@@ -6,18 +6,23 @@ use InvalidArgumentException;
 
 class DotEnv
 {
-    private string $file;
+    private string $filename;
     private array $data;
+    private array $variables;
 
-    public function __construct(string $file)
+    public function __construct(string $filename)
     {
-        $this->file = $file;
+        $this->filename = $filename;
     }
 
-    public function get(string $key)
+    public function get(string $key, $throwIfNonExist = false)
     {
         if (!isset($this->data)) {
             $this->parse();
+        }
+
+        if ($throwIfNonExist && !isset($this->data[$key])) {
+            throw new DotEnvException("$key not exist in $this->filename file!");
         }
 
         return $this->data[$key] ?? null;
@@ -36,7 +41,7 @@ class DotEnv
 
     private function getFie()
     {
-        return file_get_contents($this->file);
+        return file_get_contents($this->filename);
     }
 
     private function parseFile($file)
@@ -44,16 +49,23 @@ class DotEnv
         $lines = explode("\n", $file);
 
         $this->data = [];
+        $this->variables = [];
+
+        $this->set('BASE_DIR', realpath(dirname($this->filename)));
+        $this->set('ENV_PATH', realpath($this->filename));
 
         foreach ($lines as $line) {
+            $line = $this->applyVariables($line);
             $this->parseLine($line);
         }
     }
 
-    private function parseLine($line)
+    public function set(string $key, string $value): void
     {
-        $data = explode('=', $line, 2);
-        $this->data[$data[0]] = $this->parseValue($data[1]);
+        $parsedValue = $this->parseValue($value);
+
+        $this->data[$key] = $parsedValue;
+        $this->variables['%' . $key . '%'] = $parsedValue;
     }
 
     private function parseValue($value)
@@ -65,5 +77,36 @@ class DotEnv
         if ($value === 'null' || $value === 'NULL') return null;
 
         return $value;
+    }
+
+    private function applyVariables($line)
+    {
+        return str_replace(array_keys($this->variables), array_values($this->variables), $line);
+    }
+
+    private function parseLine($line)
+    {
+        $data = explode('=', $line, 2);
+        if (count($data) !== 2) {
+            return;
+        }
+
+        $key = trim($data[0]);
+        $value = trim($data[1]);
+
+        if (empty($key) || empty($value)) {
+            return;
+        }
+
+        $this->set($key, $value);
+    }
+
+    public function has(string $key): bool
+    {
+        if (!isset($this->data)) {
+            $this->parse();
+        }
+
+        return isset($this->data[$key]);
     }
 }

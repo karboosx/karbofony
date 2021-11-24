@@ -2,9 +2,12 @@
 
 namespace Lib\Database\ORM;
 
+use Exception;
 use Lib\Database\Database;
 use Lib\Kernel\ContainerAwareInterface;
 use Lib\Kernel\ContainerAwareTrait;
+use ReflectionClass;
+use ReflectionException;
 
 class Repository implements ContainerAwareInterface
 {
@@ -19,6 +22,9 @@ class Repository implements ContainerAwareInterface
         $this->database = $database;
     }
 
+    /**
+     * @throws ReflectionException
+     */
     public function getByFilter(array $filters): array
     {
         $query = (new QueryBuilder())
@@ -29,6 +35,10 @@ class Repository implements ContainerAwareInterface
         return $this->query($query);
     }
 
+    /**
+     * @throws ReflectionException
+     * @throws Exception
+     */
     public function query(Query $query): array
     {
         $rawData = $this->database->queryAll($query->getSql(), $query->getBindings());
@@ -42,9 +52,12 @@ class Repository implements ContainerAwareInterface
         return $data;
     }
 
-    private function hydrate($values)
+    /**
+     * @throws ReflectionException
+     */
+    private function hydrate($values): object
     {
-        $reflection = new \ReflectionClass($this->entityClass);
+        $reflection = new ReflectionClass($this->entityClass);
 
         $entity = $reflection->newInstanceWithoutConstructor();
 
@@ -68,10 +81,13 @@ class Repository implements ContainerAwareInterface
         return $entity;
     }
 
+    /**
+     * @throws ReflectionException
+     */
     private function dehydrate(object $entity): array
     {
         $data = [];
-        $reflection = new \ReflectionClass($this->entityClass);
+        $reflection = new ReflectionClass($this->entityClass);
 
         foreach ($reflection->getProperties() as $reflectionProperty) {
             $propertyName = $reflectionProperty->getName();
@@ -89,9 +105,12 @@ class Repository implements ContainerAwareInterface
         return $data;
     }
 
+    /**
+     * @throws ReflectionException
+     */
     private function getTableName(): string
     {
-        $reflection = new \ReflectionClass($this->entityClass);
+        $reflection = new ReflectionClass($this->entityClass);
 
         $entity = $reflection->newInstanceWithoutConstructor();
 
@@ -102,10 +121,14 @@ class Repository implements ContainerAwareInterface
         return $this->entityClass;
     }
 
+    /**
+     * @throws ORMException|ReflectionException
+     * @throws Exception
+     */
     public function insert(object $entity): bool
     {
         if (!is_a($entity, $this->entityClass)) {
-            throw new ORMException("This entity is not a {$this->entityClass} class!");
+            throw new ORMException("This entity is not a $this->entityClass class!");
         }
 
         $values = $this->dehydrate($entity);
@@ -118,10 +141,33 @@ class Repository implements ContainerAwareInterface
         return $this->database->execute($query->getSql(), $query->getBindings());
     }
 
-    public function update(object $entity): bool
+    /**
+     * @throws ORMException
+     * @throws ReflectionException
+     * @throws ReflectionException
+     * @throws ReflectionException
+     */
+    public function save(object $entity): bool
+    {
+        if ($this->havePrimaryKeySet($entity)) {
+            $rowCount = $this->update($entity);
+
+            if ($rowCount > 0) {
+                return true;
+            }
+        }
+
+        return $this->insert($entity) > 0;
+    }
+
+    /**
+     * @throws ORMException|ReflectionException
+     * @throws Exception
+     */
+    public function update(object $entity): int
     {
         if (!is_a($entity, $this->entityClass)) {
-            throw new ORMException("This entity is not a {$this->entityClass} class!");
+            throw new ORMException("This entity is not a $this->entityClass class!");
         }
 
         if (!($entity instanceof GetPrimaryKey)) {
@@ -143,5 +189,27 @@ class Repository implements ContainerAwareInterface
             ->getQuery();
 
         return $this->database->execute($query->getSql(), $query->getBindings());
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    private function havePrimaryKeySet(object $entity): bool
+    {
+        $data = $this->dehydrate($entity);
+
+        if (!($entity instanceof GetPrimaryKey)) {
+            return false;
+        }
+
+        $keys = $entity->GetPrimaryKey();
+
+        foreach ($keys as $key) {
+            if (!array_key_exists($key, $data) && $data[$key] !== null) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

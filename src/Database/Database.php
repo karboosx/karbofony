@@ -2,12 +2,15 @@
 
 namespace Lib\Database;
 
+use Exception;
 use Lib\Database\ORM\Repository;
+use Lib\Kernel\ContainerAwareInterface;
+use Lib\Kernel\ContainerAwareTrait;
 use PDO;
 
-class Database implements \Lib\Kernel\ContainerAwareInterface
+class Database implements ContainerAwareInterface
 {
-    use \Lib\Kernel\ContainerAwareTrait;
+    use ContainerAwareTrait;
 
     private string $dsn;
     private string $user;
@@ -32,7 +35,7 @@ class Database implements \Lib\Kernel\ContainerAwareInterface
         $test = $stm->execute($bindings);
 
         if ($test === false) {
-            throw new \Exception("Error on query: " . implode(' ', $stm->errorInfo()));
+            throw new Exception("Error on query: " . implode(' ', $stm->errorInfo()));
         }
 
         return $stm->fetchAll();
@@ -46,10 +49,10 @@ class Database implements \Lib\Kernel\ContainerAwareInterface
         $test = $stm->execute($bindings);
 
         if ($test === false) {
-            throw new \Exception("Error on query: " . implode(' ', $stm->errorInfo()));
+            throw new Exception("Error on query: " . implode(' ', $stm->errorInfo()));
         }
 
-        return true;
+        return $stm->rowCount();
     }
 
     public function getApp(): string

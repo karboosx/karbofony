@@ -4,12 +4,7 @@ namespace Lib\Kernel;
 
 trait ContainerAwareTrait
 {
-    private Container $container;
-
-    public function getContainer(): Container
-    {
-        return $this->container;
-    }
+    protected Container $container;
 
     public function setContainer(Container $container): void
     {

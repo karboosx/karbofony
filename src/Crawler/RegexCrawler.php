@@ -2,7 +2,7 @@
 
 namespace Lib\Crawler;
 
-class Crawler
+class RegexCrawler
 {
     private string $url;
 
@@ -13,7 +13,7 @@ class Crawler
 
     public function getParser()
     {
-        return new Parser($this->getData());
+        return new RegexParser($this->getData());
     }
 
     private function getData()

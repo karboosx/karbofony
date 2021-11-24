@@ -6,9 +6,14 @@ class Container
 {
     private array $concrete = [];
     private array $params = [];
+    private array $aliases = [];
 
     public function get(string $id, array $params = [])
     {
+        if (array_key_exists($id, $this->aliases)) {
+            $id = $this->aliases[$id];
+        }
+
         if (array_key_exists($id, $this->concrete)) {
             return $this->concrete[$id];
         }
@@ -16,17 +21,22 @@ class Container
         return $this->make($id, $params);
     }
 
-    public function addConcrete(string $id, $object)
+    public function setConcrete(string $id, $object)
     {
         $this->concrete[$id] = $object;
     }
 
-    public function addConcreteClass($object)
+    public function setAlias(string $id, $object)
     {
-        $this->addConcrete(get_class($object), $object);
+        $this->aliases[$id] = $object;
     }
 
-    private function make(string $class, array $overrideParams = [])
+    public function setConcreteClass($object)
+    {
+        $this->setConcrete(get_class($object), $object);
+    }
+
+    public function make(string $class, array $overrideParams = [])
     {
         $reflectionClass = new \ReflectionClass($class);
         $constructor = $reflectionClass->getConstructor();

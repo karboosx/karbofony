@@ -2,12 +2,15 @@
 
 class AutoLoad
 {
+    public static AutoLoad $instance;
     private array $classMap = [
         'Lib' => __DIR__ . '/src/'
     ];
 
     public function __construct()
     {
+        self::$instance = $this;
+
         $this->register();
     }
 
@@ -56,10 +59,26 @@ class AutoLoad
         return implode('/', $path) . '.php';
     }
 
+    public function getClassFromFile(string $file): ?string
+    {
+        foreach ($this->classMap as $namespace => $path) {
+            if (substr($file, 0, strlen($path)) === $path) {
+                return $this->convertPathToClass(substr($file, strlen($path)), $namespace);
+            }
+        }
+
+        return null;
+    }
+
     public function addMapping(string $namespace, string $absolutePath): AutoLoad
     {
         $this->classMap[$namespace] = $absolutePath;
 
         return $this;
+    }
+
+    private function convertPathToClass(string $substr, string $namespace): string
+    {
+        return $namespace.str_replace(['/','\\'], '\\', substr($substr, 0,-4));
     }
 }

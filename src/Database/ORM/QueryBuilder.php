@@ -109,16 +109,23 @@ class QueryBuilder
         return $this;
     }
 
-    public function whereRaw(string $whereSql, string $joiner = 'and'): QueryBuilder
+    public function whereRaw(string $whereSql, string $operator = 'and'): QueryBuilder
     {
         if (!$this->hasConstraint('where')) {
             $this->parts[] = 'where';
             $this->setConstraint('where');
         } else {
-            $this->parts[] = 'and';
+            $this->parts[] = $operator;
         }
 
         $this->parts[] = $whereSql;
+
+        return $this;
+    }
+
+    public function raw(string $sql): QueryBuilder
+    {
+        $this->parts[] = $sql;
 
         return $this;
     }
